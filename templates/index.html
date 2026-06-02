@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cargue de Pollos · SAVICOL 2026</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#eef2f7;color:#1a202c;min-height:100vh}
+
+header{background:linear-gradient(135deg,#1a365d,#2b6cb0);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+header div h1{font-size:1.15rem;font-weight:700}
+header div p{font-size:.8rem;opacity:.8;margin-top:2px}
+.btn-cfg{background:rgba(255,255,255,.15);border:none;color:#fff;padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.85rem;transition:.2s}
+.btn-cfg:hover{background:rgba(255,255,255,.28)}
+
+.tabs{display:flex;background:#fff;border-bottom:2px solid #e2e8f0;padding:0 20px;overflow-x:auto}
+.tab{padding:13px 18px;cursor:pointer;font-size:.88rem;font-weight:600;color:#718096;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:.2s}
+.tab.active{color:#2b6cb0;border-bottom-color:#2b6cb0}
+.tab-content{display:none;padding:20px;max-width:940px;margin:0 auto}
+.tab-content.active{display:block}
+
+.card{background:#fff;border-radius:12px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:20px}
+.card-title{font-size:.93rem;font-weight:700;color:#1a365d;margin-bottom:16px;padding-bottom:11px;border-bottom:2px solid #ebf4ff;display:flex;align-items:center;gap:8px}
+
+/* ── DRAG & DROP ── */
+.drop-zone{border:2.5px dashed #90cdf4;border-radius:14px;padding:40px 20px;text-align:center;cursor:pointer;transition:.2s;background:#f0f9ff;position:relative}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#3182ce;background:#ebf8ff}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:2.8rem;margin-bottom:10px}
+.drop-title{font-size:1rem;font-weight:700;color:#2b6cb0;margin-bottom:6px}
+.drop-sub{font-size:.82rem;color:#718096}
+.drop-formats{margin-top:10px;font-size:.75rem;color:#a0aec0;background:#e2e8f0;display:inline-block;padding:4px 12px;border-radius:20px}
+
+/* Audio player */
+.audio-player-wrap{display:none;margin-top:14px;background:#f7fafc;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.audio-player-wrap audio{flex:1;height:36px}
+.audio-name{font-size:.82rem;color:#4a5568;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+
+/* Steps */
+.steps{display:flex;align-items:center;gap:0;margin:20px 0 16px;flex-wrap:nowrap;overflow-x:auto}
+.step{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.82rem;font-weight:700;white-space:nowrap;color:#718096}
+.step.done{color:#276749;background:#f0fff4}
+.step.active{color:#2b6cb0;background:#ebf8ff}
+.step.pending{color:#a0aec0}
+.step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;background:#e2e8f0;color:#718096;flex-shrink:0}
+.step.done .step-num{background:#c6f6d5;color:#276749}
+.step.active .step-num{background:#4299e1;color:#fff}
+.sep{width:24px;height:2px;background:#e2e8f0;flex-shrink:0}
+
+/* Transcription box */
+.trans-box{background:#fffbeb;border:1.5px solid #f6e05e;border-radius:10px;padding:16px;min-height:80px;max-height:220px;overflow-y:auto;font-size:.88rem;line-height:1.6;color:#2d3748;white-space:pre-wrap;word-break:break-word}
+.trans-box.empty{color:#a0aec0;font-style:italic}
+
+textarea.trans-edit{width:100%;min-height:100px;max-height:220px;padding:14px;border:1.5px solid #f6e05e;border-radius:10px;font-size:.88rem;font-family:inherit;resize:vertical;background:#fffbeb;line-height:1.6;color:#2d3748}
+textarea.trans-edit:focus{outline:none;border-color:#ecc94b;background:#fff}
+
+/* Fecha row */
+.fecha-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.fecha-row label{font-size:.78rem;font-weight:700;color:#718096;text-transform:uppercase}
+.fecha-row input[type=date]{padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.9rem}
+.fecha-row input[type=date]:focus{outline:none;border-color:#4299e1}
+
+/* Buttons */
+.btn{padding:10px 20px;border:none;border-radius:9px;font-size:.88rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn-blue{background:linear-gradient(135deg,#2b6cb0,#4299e1);color:#fff;box-shadow:0 3px 10px rgba(66,153,225,.35)}
+.btn-blue:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+.btn-purple{background:linear-gradient(135deg,#553c9a,#6b46c1);color:#fff;box-shadow:0 3px 10px rgba(107,70,193,.35)}
+.btn-purple:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+.btn-green{background:linear-gradient(135deg,#276749,#38a169);color:#fff;box-shadow:0 3px 10px rgba(56,161,105,.3)}
+.btn-green:hover:not(:disabled){filter:brightness(1.08);transform:translateY(-1px)}
+.btn-red{background:#fed7d7;color:#c53030}
+.btn-red:hover{background:#feb2b2}
+.btn-gray{background:#edf2f7;color:#4a5568}
+.btn-gray:hover{background:#e2e8f0}
+.btn-sm{padding:7px 13px;font-size:.8rem}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+
+.spinner{width:16px;height:16px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;flex-shrink:0}
+.spinner.show{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Preview */
+.preview-wrap{display:none;margin-top:0}
+.preview-wrap.show{display:block}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:680px}
+thead tr{background:#2d3748;color:#fff}
+thead th{padding:10px;text-align:left;white-space:nowrap;font-weight:600}
+tbody tr{border-bottom:1px solid #e2e8f0;transition:.12s}
+tbody tr:hover{background:#f7faff}
+tbody td{padding:8px 10px;vertical-align:middle}
+.editable{background:#fffbeb;border:1.5px solid #f6e05e;border-radius:6px;padding:5px 8px;width:100%;font-size:.8rem;font-family:inherit}
+.editable:focus{outline:none;border-color:#ecc94b;background:#fff}
+.del-row{background:none;border:none;color:#fc8181;cursor:pointer;font-size:.95rem;padding:3px 7px;border-radius:4px}
+.del-row:hover{background:#fed7d7}
+.total-chip{background:#c6f6d5;color:#276749;font-weight:700;padding:2px 8px;border-radius:12px;font-size:.78rem}
+
+/* Records table */
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.filter-row input[type=date]{padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.85rem}
+tbody tr.has-total{background:#f0fff4;font-weight:600}
+.total-cell{color:#276749;font-weight:800}
+.empty-msg{text-align:center;padding:40px;color:#a0aec0;font-size:.9rem}
+
+.summary-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.sum-item{background:#fff;border-radius:10px;padding:12px 18px;box-shadow:0 1px 6px rgba(0,0,0,.06);flex:1;min-width:100px}
+.sum-item .val{font-size:1.4rem;font-weight:800;color:#2b6cb0}
+.sum-item .lbl{font-size:.7rem;color:#718096;text-transform:uppercase;font-weight:600;margin-top:2px}
+
+/* Form */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.form-grid{grid-template-columns:1fr}}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:.72rem;font-weight:700;text-transform:uppercase;color:#718096;letter-spacing:.4px}
+.fg input,.fg select{padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.9rem;font-family:inherit;background:#f7fafc}
+.fg input:focus,.fg select:focus{outline:none;border-color:#4299e1;background:#fff}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:999}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:14px;padding:26px;width:400px;max-width:94vw;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+.modal h3{font-size:1rem;font-weight:700;margin-bottom:14px;color:#1a365d}
+.modal label{font-size:.77rem;font-weight:700;color:#718096;text-transform:uppercase;display:block;margin-bottom:4px}
+.modal input{width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.9rem;margin-bottom:14px;background:#f7fafc}
+.modal input:focus{outline:none;border-color:#4299e1}
+.modal-hint{font-size:.77rem;color:#718096;background:#f7fafc;padding:10px;border-radius:8px;margin-bottom:14px;line-height:1.55}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+#toast{position:fixed;bottom:22px;right:22px;padding:12px 18px;border-radius:10px;font-size:.88rem;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.15);display:none;z-index:2000;animation:slide-in .25s ease}
+#toast.success{background:#c6f6d5;color:#276749}
+#toast.error{background:#fed7d7;color:#c53030}
+@keyframes slide-in{from{transform:translateX(40px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+.badge{display:inline-block;background:#553c9a;color:#fff;padding:3px 12px;border-radius:20px;font-size:.77rem;font-weight:700}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🐔 Cargue de Pollos — SAVICOL</h1>
+    <p>Consolidado 2026 · Registro de viajes</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn-cfg" onclick="descargarExcel()">⬇️ Descargar Excel</button>
+    <button class="btn-cfg" onclick="abrirCarpeta()">📂 Ver carpeta</button>
+    <button class="btn-cfg" onclick="openConfig()">⚙️ Clave API</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('audio')">🎙️ Subir Audio</div>
+  <div class="tab" onclick="switchTab('manual')">✏️ Manual</div>
+  <div class="tab" onclick="switchTab('registros')">📋 Registros</div>
+</div>
+
+<!-- ═══ TAB AUDIO ═══════════════════════════════════════════════ -->
+<div class="tab-content active" id="tab-audio">
+
+  <div class="card">
+    <div class="card-title">🎙️ Audio del reporte de cargue</div>
+
+    <div class="fecha-row">
+      <label>Fecha del cargue:</label>
+      <input type="date" id="a-fecha" value="{{ today }}">
+    </div>
+
+    <!-- STEP INDICATOR -->
+    <div class="steps">
+      <div class="step active" id="step1"><div class="step-num">1</div> Subir audio</div>
+      <div class="sep"></div>
+      <div class="step pending" id="step2"><div class="step-num">2</div> Transcribir</div>
+      <div class="sep"></div>
+      <div class="step pending" id="step3"><div class="step-num">3</div> Extraer datos</div>
+      <div class="sep"></div>
+      <div class="step pending" id="step4"><div class="step-num">4</div> Guardar Excel</div>
+    </div>
+
+    <!-- DROP ZONE -->
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="audioFile" accept="audio/*,.ogg,.m4a,.mp3,.mp4,.opus,.wav,.aac" onchange="onFileSelected(this.files[0])">
+      <div class="drop-icon">🎧</div>
+      <div class="drop-title">Arrastra el audio aquí o toca para buscar</div>
+      <div class="drop-sub">Suelta el archivo de voz de WhatsApp directamente aquí</div>
+      <div class="drop-formats">OGG · M4A · MP3 · MP4 · WAV · OPUS · AAC</div>
+    </div>
+
+    <!-- AUDIO PREVIEW -->
+    <div id="audioPlayerWrap" style="display:none;margin-top:12px;background:#f7fafc;border-radius:10px;padding:12px 16px;display:none;align-items:center;gap:12px">
+      <span id="audioName" style="font-size:.82rem;font-weight:600;color:#4a5568;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;max-width:200px"></span>
+      <audio id="audioPreview" controls style="flex:2;height:34px"></audio>
+      <button class="btn btn-gray btn-sm" onclick="resetAudio()">✕</button>
+    </div>
+
+    <!-- STEP 1 ACTIONS -->
+    <div class="actions" id="actStep1" style="display:none">
+      <button class="btn btn-blue" id="btnTranscribir" onclick="transcribir()">
+        <span id="spinTrans" class="spinner"></span>
+        🎙️ Transcribir audio
+      </button>
+    </div>
+
+    <!-- TRANSCRIPTION RESULT -->
+    <div id="transSection" style="display:none;margin-top:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:.8rem;font-weight:700;color:#718096;text-transform:uppercase">Transcripción</div>
+        <div style="font-size:.75rem;color:#a0aec0" id="transMeta"></div>
+      </div>
+      <textarea class="trans-edit" id="transText" placeholder="Aquí aparecerá la transcripción del audio..."></textarea>
+      <div class="actions">
+        <button class="btn btn-purple" id="btnExtraer" onclick="extraerDatos()">
+          <span id="spinExtract" class="spinner"></span>
+          ✨ Extraer datos con IA
+        </button>
+        <button class="btn btn-gray btn-sm" onclick="resetAudio()">↩ Empezar de nuevo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW VIAJES -->
+  <div class="preview-wrap" id="previewWrap">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+        <div class="card-title" style="margin:0;border:0;padding:0">✅ Viajes extraídos — revisa y corrige</div>
+        <span class="badge" id="previewCount">0 viajes</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Conductor</th><th>Placa</th><th>H. Inicio</th><th>H. Salida</th><th>Granja</th><th>Cantidad</th><th>Total Día</th><th></th></tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn-green" onclick="guardarTodo()">💾 Guardar todo en Excel</button>
+        <button class="btn btn-gray btn-sm" onclick="cancelPreview()">✕ Cancelar</button>
+        <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="eliminarUltimo()">⏪ Deshacer último</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB MANUAL ═══════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-manual">
+  <div class="card">
+    <div class="card-title">➕ Registrar un viaje manualmente</div>
+    <div class="form-grid">
+      <div class="fg"><label>Fecha</label><input type="date" id="m-fecha" value="{{ today }}" onchange="loadNextViaje()"></div>
+      <div class="fg"><label>Nº Viaje</label><input type="number" id="m-viaje" placeholder="Auto" min="1"></div>
+      <div class="fg"><label>Nombre Conductor</label><input type="text" id="m-conductor" placeholder="Ej: ALEX GOMEZ" autocomplete="off"></div>
+      <div class="fg"><label>Placa</label><input type="text" id="m-placa" placeholder="Ej: TLO881" maxlength="10" style="text-transform:uppercase"></div>
+      <div class="fg"><label>Hora Inicio</label><input type="time" id="m-hinicio"></div>
+      <div class="fg"><label>Hora Salida</label><input type="time" id="m-hsalida"></div>
+      <div class="fg"><label>Cantidad pollos</label><input type="number" id="m-cantidad" placeholder="Ej: 3240" min="0"></div>
+      <div class="fg"><label>Total día <small style="color:#a0aec0">(solo último viaje)</small></label><input type="number" id="m-total" placeholder="Vacío si no es el último" min="0"></div>
+      <div class="fg"><label>Granja</label><input type="text" id="m-granja" placeholder="Ej: MALAGUEÑA" autocomplete="off"></div>
+      <div class="fg"><label>Cuadrilla</label>
+        <select id="m-cuadrilla"><option value="CARGUEROS">CARGUEROS</option><option value="ABONEROS">ABONEROS</option><option value="DOBLE">DOBLE</option></select>
+      </div>
+      <div class="fg"><label>Personas</label><input type="number" id="m-personas" value="11" min="1" max="50"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-green" onclick="guardarManual()">💾 Guardar en Excel</button>
+      <button class="btn btn-gray btn-sm" onclick="limpiarManual()">🗑️ Limpiar</button>
+      <button class="btn btn-red btn-sm" style="margin-left:auto" onclick="eliminarUltimo()">⏪ Deshacer último</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB REGISTROS ════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-registros">
+  <div class="summary-bar" id="summaryBar" style="display:none">
+    <div class="sum-item"><div class="val" id="sumViajes">0</div><div class="lbl">Viajes</div></div>
+    <div class="sum-item"><div class="val" id="sumPollos">0</div><div class="lbl">Pollos</div></div>
+    <div class="sum-item"><div class="val" id="sumTotal">—</div><div class="lbl">Total día</div></div>
+  </div>
+  <div class="card">
+    <div class="filter-row">
+      <label style="font-size:.79rem;color:#718096;font-weight:700">Filtrar:</label>
+      <input type="date" id="filterFecha" value="{{ today }}" onchange="renderTable()">
+      <button class="btn btn-gray btn-sm" onclick="document.getElementById('filterFecha').value='';renderTable()">Ver todo</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Fecha</th><th>Viaje</th><th>Conductor</th><th>Placa</th><th>H. Inicio</th><th>H. Salida</th><th>Granja</th><th>Cantidad</th><th>Total Día</th></tr></thead>
+        <tbody id="tableBody"><tr><td colspan="10" class="empty-msg">Cargando…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIG -->
+<div class="modal-overlay" id="modalCfg">
+  <div class="modal">
+    <h3>⚙️ Configurar IA para extracción</h3>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button id="tabGroq" class="btn btn-green btn-sm" style="flex:1" onclick="selectProvider('groq')">🆓 Groq (GRATIS)</button>
+      <button id="tabAnthropic" class="btn btn-gray btn-sm" style="flex:1" onclick="selectProvider('anthropic')">💳 Anthropic (pago)</button>
+    </div>
+
+    <div id="infoGroq">
+      <div class="modal-hint" style="background:#f0fff4;border:1px solid #9ae6b4">
+        <strong>✅ Groq es GRATIS</strong><br>
+        1. Ve a <strong>console.groq.com</strong><br>
+        2. Crea cuenta gratis (con Gmail o GitHub)<br>
+        3. Toca <strong>"API Keys" → "Create API Key"</strong><br>
+        4. Copia la clave (empieza con <code>gsk_...</code>)
+      </div>
+    </div>
+    <div id="infoAnthropic" style="display:none">
+      <div class="modal-hint">
+        Ve a <strong>console.anthropic.com → API Keys</strong><br>
+        Crea una clave (empieza con <code>sk-ant-...</code>)<br>
+        Requiere tarjeta de crédito.
+      </div>
+    </div>
+
+    <label id="cfgLabel">Pega tu clave de Groq aquí</label>
+    <input type="text" id="cfgKey" placeholder="gsk_xxxxxxxxxxxxxxxx" autocomplete="off" style="font-size:.82rem">
+    <div class="modal-actions">
+      <button class="btn btn-gray btn-sm" onclick="closeConfig()">Cancelar</button>
+      <button class="btn btn-green btn-sm" onclick="saveConfig()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let allEntries=[], previewViajes=[], apiKey='';
+let currentFile=null;
+
+// INIT
+(async()=>{
+  const cfg=await fetch('/api/config').then(r=>r.json());
+  if(cfg.api_key){apiKey=cfg.api_key;document.getElementById('cfgKey').value=cfg.api_key;}
+  await loadEntries();
+})();
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(n){
+  const names=['audio','manual','registros'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',names[i]===n));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+n).classList.add('active');
+  if(n==='registros')renderTable();
+}
+
+// ── DATA ──────────────────────────────────────────────────────
+async function loadEntries(){
+  allEntries=await fetch('/api/entries').then(r=>r.json());
+}
+async function loadNextViaje(){
+  const f=document.getElementById('m-fecha').value;
+  if(!f)return;
+  const d=await fetch('/api/next-viaje?fecha='+f).then(r=>r.json());
+  const el=document.getElementById('m-viaje');
+  el.placeholder='Auto ('+d.next_viaje+')'; el._next=d.next_viaje;
+}
+loadNextViaje();
+
+// ── DRAG & DROP ───────────────────────────────────────────────
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)onFileSelected(f);});
+
+function onFileSelected(file){
+  if(!file)return;
+  currentFile=file;
+  // show player
+  const wrap=document.getElementById('audioPlayerWrap');
+  wrap.style.display='flex';
+  document.getElementById('audioName').textContent=file.name;
+  const audio=document.getElementById('audioPreview');
+  audio.src=URL.createObjectURL(file);
+  // show transcribe button
+  document.getElementById('actStep1').style.display='flex';
+  setStep(1);
+}
+
+function resetAudio(){
+  currentFile=null;
+  document.getElementById('audioFile').value='';
+  document.getElementById('audioPlayerWrap').style.display='none';
+  document.getElementById('actStep1').style.display='none';
+  document.getElementById('transSection').style.display='none';
+  document.getElementById('audioPreview').src='';
+  cancelPreview();
+  setStep(0);
+}
+
+// ── STEPS ─────────────────────────────────────────────────────
+function setStep(n){
+  for(let i=1;i<=4;i++){
+    const s=document.getElementById('step'+i);
+    s.className='step '+(i<n+1?'done':i===n+1?'active':'pending');
+  }
+}
+
+// ── TRANSCRIBE ────────────────────────────────────────────────
+async function transcribir(){
+  if(!currentFile){toast('Primero sube un archivo de audio','error');return;}
+  const btn=document.getElementById('btnTranscribir');
+  const sp=document.getElementById('spinTrans');
+  btn.disabled=true; sp.classList.add('show');
+  btn.lastChild.textContent=' Transcribiendo…';
+  setStep(2);
+  try{
+    const fd=new FormData(); fd.append('audio',currentFile);
+    const res=await fetch('/api/transcribe',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!data.ok){toast('Error: '+data.error,'error');setStep(1);return;}
+    document.getElementById('transText').value=data.texto;
+    document.getElementById('transMeta').textContent=`Duración: ${data.duration}s · Idioma: ${data.lang}`;
+    document.getElementById('transSection').style.display='block';
+    setStep(3);
+    toast('✅ Audio transcrito correctamente','success');
+  }catch(e){
+    toast('Error de transcripción: '+e.message,'error');setStep(1);
+  }finally{
+    btn.disabled=false; sp.classList.remove('show');
+    btn.lastChild.textContent=' Transcribir audio';
+  }
+}
+
+// ── EXTRACT ───────────────────────────────────────────────────
+async function extraerDatos(){
+  const texto=document.getElementById('transText').value.trim();
+  const fecha=document.getElementById('a-fecha').value;
+  if(!texto){toast('La transcripción está vacía','error');return;}
+  if(!apiKey){toast('Configura la clave API primero (⚙️ arriba)','error');return;}
+  const btn=document.getElementById('btnExtraer');
+  const sp=document.getElementById('spinExtract');
+  btn.disabled=true; sp.classList.add('show');
+  btn.lastChild.textContent=' Procesando…';
+  try{
+    const res=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({texto,fecha,api_key:apiKey})});
+    const data=await res.json();
+    if(!data.ok){toast('Error: '+data.error,'error');return;}
+    previewViajes=data.viajes;
+    renderPreview();
+    setStep(4);
+    toast(`✅ ${previewViajes.length} viaje(s) extraído(s). Revisa y guarda.`,'success');
+  }catch(e){toast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;sp.classList.remove('show');btn.lastChild.textContent=' Extraer datos con IA';}
+}
+
+// ── PREVIEW ───────────────────────────────────────────────────
+function renderPreview(){
+  const tb=document.getElementById('previewBody');
+  const fmt=v=>v||'';
+  tb.innerHTML=previewViajes.map((v,i)=>`
+    <tr>
+      <td><b>${i+1}</b></td>
+      <td><input class="editable" value="${fmt(v.conductor)}" onchange="previewViajes[${i}].conductor=this.value" style="min-width:130px"></td>
+      <td><input class="editable" value="${fmt(v.placa)}" onchange="previewViajes[${i}].placa=this.value" style="width:80px"></td>
+      <td><input class="editable" type="time" value="${fmt(v.hora_inicio)}" onchange="previewViajes[${i}].hora_inicio=this.value"></td>
+      <td><input class="editable" type="time" value="${fmt(v.hora_salida)}" onchange="previewViajes[${i}].hora_salida=this.value"></td>
+      <td><input class="editable" value="${fmt(v.granja)}" onchange="previewViajes[${i}].granja=this.value" style="width:100px"></td>
+      <td><input class="editable" type="number" value="${v.cantidad||''}" onchange="previewViajes[${i}].cantidad=this.value" style="width:82px"></td>
+      <td>${v.total_dia!=null?'<span class="total-chip">'+Number(v.total_dia).toLocaleString('es-CO')+'</span>':'<span style="color:#ccc">—</span>'}</td>
+      <td><button class="del-row" onclick="removeRow(${i})">✕</button></td>
+    </tr>`).join('');
+  document.getElementById('previewCount').textContent=previewViajes.length+' viaje'+(previewViajes.length!==1?'s':'');
+  document.getElementById('previewWrap').classList.add('show');
+}
+
+function removeRow(i){previewViajes.splice(i,1);if(!previewViajes.length){cancelPreview();return;}renderPreview();}
+function cancelPreview(){previewViajes=[];document.getElementById('previewWrap').classList.remove('show');}
+
+// ── SAVE BULK ─────────────────────────────────────────────────
+async function guardarTodo(){
+  if(!previewViajes.length)return;
+  const fecha=document.getElementById('a-fecha').value;
+  const res=await fetch('/api/add-bulk',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({viajes:previewViajes,fecha})});
+  const data=await res.json();
+  if(data.ok){
+    toast(`✅ ${data.guardados} viaje(s) guardados en Excel`,'success');
+    cancelPreview(); resetAudio();
+    await loadEntries();
+  }else toast('Error: '+data.error,'error');
+}
+
+// ── SAVE MANUAL ───────────────────────────────────────────────
+async function guardarManual(){
+  const c=document.getElementById('m-conductor').value.trim();
+  const q=document.getElementById('m-cantidad').value.trim();
+  if(!c){toast('Ingresa el nombre del conductor','error');return;}
+  if(!q){toast('Ingresa la cantidad','error');return;}
+  const vf=document.getElementById('m-viaje');
+  const res=await fetch('/api/add',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({fecha:document.getElementById('m-fecha').value,
+      viaje:vf.value?parseInt(vf.value):vf._next,conductor:c,cantidad:q,
+      placa:document.getElementById('m-placa').value.trim().toUpperCase(),
+      hora_inicio:document.getElementById('m-hinicio').value,
+      hora_salida:document.getElementById('m-hsalida').value,
+      total_dia:document.getElementById('m-total').value||null,
+      granja:document.getElementById('m-granja').value.trim(),
+      cuadrilla:document.getElementById('m-cuadrilla').value,
+      personas:document.getElementById('m-personas').value})});
+  const data=await res.json();
+  if(data.ok){toast(`✅ Viaje ${data.viaje} guardado`,'success');limpiarManual();await loadEntries();}
+  else toast('Error: '+data.error,'error');
+}
+
+function limpiarManual(){
+  ['m-conductor','m-placa','m-hinicio','m-hsalida','m-cantidad','m-total','m-granja'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-viaje').value=''; loadNextViaje();
+}
+
+async function eliminarUltimo(){
+  if(!confirm('¿Eliminar el último registro del Excel?'))return;
+  const data=await fetch('/api/delete-last',{method:'POST'}).then(r=>r.json());
+  if(data.ok){toast('Último registro eliminado','success');await loadEntries();renderTable();}
+  else toast('Error: '+data.error,'error');
+}
+
+// ── TABLE ─────────────────────────────────────────────────────
+function renderTable(){
+  const filter=document.getElementById('filterFecha').value;
+  const rows=filter?allEntries.filter(e=>e.fecha===filter):allEntries;
+  const tb=document.getElementById('tableBody');
+  if(!rows.length){tb.innerHTML='<tr><td colspan="10" class="empty-msg">Sin registros</td></tr>';
+    document.getElementById('summaryBar').style.display='none';return;}
+  const fmt=n=>n!=null?n.toLocaleString('es-CO'):'';
+  tb.innerHTML=rows.map((e,i)=>`<tr class="${e.total_dia!=null?'has-total':''}">
+    <td>${i+1}</td><td>${e.fecha}</td><td>${e.viaje||''}</td>
+    <td>${e.conductor}</td><td>${e.placa}</td>
+    <td>${e.hora_inicio}</td><td>${e.hora_salida}</td><td>${e.granja}</td>
+    <td>${fmt(e.cantidad)}</td>
+    <td class="${e.total_dia!=null?'total-cell':''}">${fmt(e.total_dia)}</td>
+  </tr>`).join('');
+  const tot=rows.reduce((s,e)=>s+(e.cantidad||0),0);
+  const last=rows.slice().reverse().find(e=>e.total_dia!=null);
+  document.getElementById('sumViajes').textContent=rows.length;
+  document.getElementById('sumPollos').textContent=tot.toLocaleString('es-CO');
+  document.getElementById('sumTotal').textContent=last?last.total_dia.toLocaleString('es-CO'):'—';
+  document.getElementById('summaryBar').style.display='flex';
+}
+
+// ── CONFIG ────────────────────────────────────────────────────
+let selectedProvider = 'groq';
+
+function openConfig(){
+  document.getElementById('modalCfg').classList.add('show');
+  // load saved provider
+  fetch('/api/config').then(r=>r.json()).then(cfg=>{
+    selectProvider(cfg.proveedor||'groq');
+    if(cfg.api_key) document.getElementById('cfgKey').value=cfg.api_key;
+  });
+}
+function closeConfig(){document.getElementById('modalCfg').classList.remove('show');}
+
+function selectProvider(p){
+  selectedProvider=p;
+  document.getElementById('tabGroq').className='btn btn-sm '+(p==='groq'?'btn-green':'btn-gray');
+  document.getElementById('tabAnthropic').className='btn btn-sm '+(p==='anthropic'?'btn-blue':'btn-gray');
+  document.getElementById('infoGroq').style.display=p==='groq'?'block':'none';
+  document.getElementById('infoAnthropic').style.display=p==='anthropic'?'block':'none';
+  document.getElementById('cfgLabel').textContent=p==='groq'?'Pega tu clave de Groq aquí':'Pega tu clave de Anthropic aquí';
+  document.getElementById('cfgKey').placeholder=p==='groq'?'gsk_xxxxxxxxxxxxxxxx':'sk-ant-api03-xxxxxxxxxxxxxxxx';
+  document.getElementById('cfgKey').value='';
+}
+
+async function saveConfig(){
+  const k=document.getElementById('cfgKey').value.trim();
+  if(!k){toast('Ingresa la clave','error');return;}
+  await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({api_key:k, proveedor:selectedProvider})});
+  apiKey=k; closeConfig();
+  toast('✅ Clave guardada — usando '+(selectedProvider==='groq'?'Groq (gratis)':'Anthropic'),'success');
+}
+
+// ── ABRIR CARPETA & DESCARGAR ─────────────────────────────────
+async function abrirCarpeta(){
+  await fetch('/api/open-folder',{method:'POST'});
+  toast('📂 Abriendo carpeta en Finder…','success');
+}
+function descargarExcel(){
+  window.location.href='/api/download-excel';
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=type;t.style.display='block';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3500);
+}
+</script>
+</body>
+</html>
