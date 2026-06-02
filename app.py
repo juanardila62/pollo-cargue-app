@@ -190,7 +190,8 @@ def api_parse():
     try:
         body=request.json
         texto=body.get('texto','').strip()
-        api_key=body.get('api_key') or load_config().get('api_key','')
+        body_key=body.get('api_key','')
+        api_key=load_config().get('api_key','') if (not body_key or body_key=='__server__') else body_key
         fecha=body.get('fecha',date.today().strftime('%Y-%m-%d'))
         proveedor=load_config().get('proveedor','groq')
         if not api_key: return jsonify({'ok':False,'error':'Clave API no configurada'}),400
