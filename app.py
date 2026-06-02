@@ -11,6 +11,12 @@ EXCEL_NAME = 'CONSOLIDADO INFORMES CARGUES DE POLLO 2026.xlsx'
 EXCEL_PATH = os.path.join(DATA_DIR, EXCEL_NAME)
 CONFIG_FILE= os.path.join(DATA_DIR, 'config.json')
 
+COL_DIA=2;COL_FECHA=3;COL_VIAJE=4;COL_GRANJA=5;COL_CUAD=6
+COL_PERS=7;COL_COND=8;COL_PLACA=9;COL_HINICIO=10;COL_HSALIDA=11
+COL_CANT=12;COL_TOTAL=13
+SHEET_NAME='CONSOLIDADO 2026'
+DATA_START=6
+
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # Si no hay Excel en DATA_DIR, copiarlo localmente o crear uno nuevo
@@ -20,7 +26,6 @@ if not os.path.exists(EXCEL_PATH):
         import shutil
         shutil.copy2(_LOCAL_EXCEL, EXCEL_PATH)
     else:
-        # Crear Excel vacío con la estructura correcta
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = SHEET_NAME
@@ -31,12 +36,6 @@ if not os.path.exists(EXCEL_PATH):
         for col, h in enumerate(headers, 1):
             ws.cell(row=DATA_START-1, column=col).value = h
         wb.save(EXCEL_PATH)
-
-COL_DIA=2;COL_FECHA=3;COL_VIAJE=4;COL_GRANJA=5;COL_CUAD=6
-COL_PERS=7;COL_COND=8;COL_PLACA=9;COL_HINICIO=10;COL_HSALIDA=11
-COL_CANT=12;COL_TOTAL=13
-SHEET_NAME='CONSOLIDADO 2026'
-DATA_START=6
 
 # ── Config ────────────────────────────────────────────────────────────────────
 def load_config():
