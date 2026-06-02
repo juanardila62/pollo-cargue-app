@@ -13,11 +13,24 @@ CONFIG_FILE= os.path.join(DATA_DIR, 'config.json')
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Si no hay Excel en DATA_DIR pero sí localmente, copiarlo automáticamente
+# Si no hay Excel en DATA_DIR, copiarlo localmente o crear uno nuevo
 _LOCAL_EXCEL = '/Users/macair/Documents/SAVICOL/' + EXCEL_NAME
-if not os.path.exists(EXCEL_PATH) and os.path.exists(_LOCAL_EXCEL):
-    import shutil
-    shutil.copy2(_LOCAL_EXCEL, EXCEL_PATH)
+if not os.path.exists(EXCEL_PATH):
+    if os.path.exists(_LOCAL_EXCEL):
+        import shutil
+        shutil.copy2(_LOCAL_EXCEL, EXCEL_PATH)
+    else:
+        # Crear Excel vacío con la estructura correcta
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = SHEET_NAME
+        ws.cell(row=3, column=5).value = 'REPORTE DIARIO DE CARGUE  SAVICOL'
+        headers = [None, None, 'FECHA ', 'Nº VIAJES', 'GRANJA ', 'CUADRILLA',
+                   'CANTIDAD DE PERSONAS ', 'NOMBRE CONDUCTOR', 'PLACA',
+                   'HORA INICIO', 'HORA SALIDA ', 'CANTIDAD', 'TOTAL POLLOS DIA ']
+        for col, h in enumerate(headers, 1):
+            ws.cell(row=DATA_START-1, column=col).value = h
+        wb.save(EXCEL_PATH)
 
 COL_DIA=2;COL_FECHA=3;COL_VIAJE=4;COL_GRANJA=5;COL_CUAD=6
 COL_PERS=7;COL_COND=8;COL_PLACA=9;COL_HINICIO=10;COL_HSALIDA=11
