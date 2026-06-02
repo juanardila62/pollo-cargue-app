@@ -145,7 +145,8 @@ tbody tr.has-total{background:#f0fff4;font-weight:600}
   </div>
   <div style="display:flex;gap:8px;align-items:center">
     <button class="btn-cfg" onclick="descargarExcel()">⬇️ Descargar Excel</button>
-    <button class="btn-cfg" onclick="abrirCarpeta()">📂 Ver carpeta</button>
+    <button class="btn-cfg" onclick="document.getElementById('uploadExcel').click()">⬆️ Subir Excel</button>
+    <input type="file" id="uploadExcel" accept=".xlsx" style="display:none" onchange="subirExcel(this)">
     <button class="btn-cfg" onclick="openConfig()">⚙️ Clave API</button>
   </div>
 </header>
@@ -578,13 +579,23 @@ async function saveConfig(){
   toast('✅ Clave guardada — usando '+(selectedProvider==='groq'?'Groq (gratis)':'Anthropic'),'success');
 }
 
-// ── ABRIR CARPETA & DESCARGAR ─────────────────────────────────
+// ── ABRIR CARPETA & DESCARGAR & SUBIR ────────────────────────
 async function abrirCarpeta(){
   await fetch('/api/open-folder',{method:'POST'});
   toast('📂 Abriendo carpeta en Finder…','success');
 }
 function descargarExcel(){
   window.location.href='/api/download-excel';
+}
+async function subirExcel(input){
+  const file=input.files[0]; if(!file) return;
+  const fd=new FormData(); fd.append('excel',file);
+  toast('⏳ Subiendo Excel…','success');
+  const res=await fetch('/api/upload-excel',{method:'POST',body:fd});
+  const data=await res.json();
+  if(data.ok){ toast('✅ Excel subido correctamente','success'); await loadEntries(); renderTable(); }
+  else toast('Error: '+data.error,'error');
+  input.value='';
 }
 
 // ── TOAST ─────────────────────────────────────────────────────
