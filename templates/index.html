@@ -163,9 +163,31 @@ tbody tr.has-total{background:#f0fff4;font-weight:600}
   <div class="card">
     <div class="card-title">🎙️ Audio del reporte de cargue</div>
 
-    <div class="fecha-row">
-      <label>Fecha del cargue:</label>
-      <input type="date" id="a-fecha" value="{{ today }}">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="fg">
+        <label>Fecha del cargue</label>
+        <input type="date" id="a-fecha" value="{{ today }}">
+      </div>
+      <div class="fg">
+        <label>Nº Viaje (primer viaje del audio)</label>
+        <input type="number" id="a-viaje" value="1" min="1">
+      </div>
+      <div class="fg">
+        <label>Granja</label>
+        <input type="text" id="a-granja" placeholder="Ej: MALAGUEÑA" style="text-transform:uppercase">
+      </div>
+      <div class="fg">
+        <label>Cuadrilla</label>
+        <select id="a-cuadrilla">
+          <option value="CARGUEROS">CARGUEROS</option>
+          <option value="ABONEROS">ABONEROS</option>
+          <option value="DOBLE">DOBLE</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Cantidad de personas</label>
+        <input type="number" id="a-personas" value="11" min="1" max="50">
+      </div>
     </div>
 
     <!-- STEP INDICATOR -->
@@ -478,9 +500,23 @@ function cancelPreview(){previewViajes=[];document.getElementById('previewWrap')
 // ── SAVE BULK ─────────────────────────────────────────────────
 async function guardarTodo(){
   if(!previewViajes.length)return;
-  const fecha=document.getElementById('a-fecha').value;
+  const fecha     = document.getElementById('a-fecha').value;
+  const granja    = document.getElementById('a-granja').value.trim().toUpperCase();
+  const cuadrilla = document.getElementById('a-cuadrilla').value;
+  const personas  = document.getElementById('a-personas').value;
+  const viajeBase = parseInt(document.getElementById('a-viaje').value||'1');
+
+  // Aplicar campos globales a cada viaje si no los tiene
+  const viajes = previewViajes.map((v,i)=>({
+    ...v,
+    granja:    v.granja || granja,
+    cuadrilla: v.cuadrilla || cuadrilla,
+    personas:  v.personas || personas,
+    viaje:     viajeBase + i,
+  }));
+
   const res=await fetch('/api/add-bulk',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({viajes:previewViajes,fecha})});
+    body:JSON.stringify({viajes, fecha})});
   const data=await res.json();
   if(data.ok){
     toast(`✅ ${data.guardados} viaje(s) guardados en Excel`,'success');
