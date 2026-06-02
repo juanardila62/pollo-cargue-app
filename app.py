@@ -23,17 +23,26 @@ def get_conn():
 
 def init_db():
     if not DATABASE_URL: return
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute('''CREATE TABLE IF NOT EXISTS entries (
-                id SERIAL PRIMARY KEY,
-                dia INTEGER, fecha DATE NOT NULL, viaje INTEGER,
-                granja TEXT, cuadrilla TEXT, personas INTEGER,
-                conductor TEXT, placa TEXT,
-                hora_inicio TIME, hora_salida TIME,
-                cantidad INTEGER, total_dia INTEGER
-            )''')
-        conn.commit()
+    import time
+    for attempt in range(10):
+        try:
+            with get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute('''CREATE TABLE IF NOT EXISTS entries (
+                        id SERIAL PRIMARY KEY,
+                        dia INTEGER, fecha DATE NOT NULL, viaje INTEGER,
+                        granja TEXT, cuadrilla TEXT, personas INTEGER,
+                        conductor TEXT, placa TEXT,
+                        hora_inicio TIME, hora_salida TIME,
+                        cantidad INTEGER, total_dia INTEGER
+                    )''')
+                conn.commit()
+            return
+        except Exception as e:
+            if attempt < 9:
+                time.sleep(3)
+            else:
+                print(f'DB init failed after 10 attempts: {e}')
 
 init_db()
 
