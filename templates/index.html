@@ -337,8 +337,8 @@ let currentFile=null;
 
 // INIT
 (async()=>{
-  const cfg=await fetch('/api/config').then(r=>r.json());
-  if(cfg.api_key){apiKey=cfg.api_key;document.getElementById('cfgKey').value=cfg.api_key;}
+  const hk=await fetch('/api/has-key').then(r=>r.json());
+  if(hk.has_key) apiKey='__server__';
   await loadEntries();
 })();
 
@@ -417,7 +417,7 @@ async function transcribir(){
     const data=await res.json();
     if(!data.ok){toast('Error: '+data.error,'error');setStep(1);return;}
     document.getElementById('transText').value=data.texto;
-    document.getElementById('transMeta').textContent=`Duración: ${data.duration}s · Idioma: ${data.lang}`;
+    document.getElementById('transMeta').textContent=data.duration?`Duración: ${data.duration}s · Idioma: ${data.lang}`:'Transcripción lista';
     document.getElementById('transSection').style.display='block';
     setStep(3);
     toast('✅ Audio transcrito correctamente','success');
