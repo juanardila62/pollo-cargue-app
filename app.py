@@ -83,6 +83,14 @@ def to_time(val):
     if isinstance(val, str): return parse_time(val)
     return None
 
+def to_int(val):
+    if val is None: return None
+    if isinstance(val, (int, float)): return int(val)
+    if isinstance(val, str):
+        try: return int(float(val.replace(',','.')))
+        except: return None
+    return None
+
 # ── DB Operations ─────────────────────────────────────────────────────────────
 def get_entries():
     if not DATABASE_URL: return []
@@ -361,7 +369,7 @@ def api_upload_excel():
         return jsonify({'ok':False,'error':'No se recibió archivo'}), 400
     f = request.files['excel']
     try:
-        wb = openpyxl.load_workbook(f)
+        wb = openpyxl.load_workbook(f, data_only=True)
         ws = wb[SHEET_NAME]
         with get_conn() as conn:
             with conn.cursor() as cur:
@@ -382,8 +390,7 @@ def api_upload_excel():
                          str(r[7] or '').upper() or None,
                          str(r[8] or '').upper() or None,
                          to_time(r[9]), to_time(r[10]),
-                         int(r[11]) if r[11] else None,
-                         int(r[12]) if r[12] else None))
+                         to_int(r[11]), to_int(r[12])))
                     count += 1
             conn.commit()
         return jsonify({'ok':True,'registros':count})
