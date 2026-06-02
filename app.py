@@ -27,9 +27,14 @@ DATA_START=6
 
 # ── Config ────────────────────────────────────────────────────────────────────
 def load_config():
+    cfg = {}
     if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE) as f: return json.load(f)
-    return {}
+        with open(CONFIG_FILE) as f: cfg = json.load(f)
+    # Variables de entorno tienen prioridad (Railway)
+    if os.environ.get('GROQ_API_KEY'):
+        cfg['api_key'] = os.environ['GROQ_API_KEY']
+        cfg['proveedor'] = 'groq'
+    return cfg
 
 def save_config(cfg):
     with open(CONFIG_FILE,'w') as f: json.dump(cfg,f)
