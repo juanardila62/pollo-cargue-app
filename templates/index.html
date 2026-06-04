@@ -201,31 +201,40 @@ tbody tr.has-total{background:#f0fff4;font-weight:600}
       <div class="step pending" id="step4"><div class="step-num">4</div> Guardar Excel</div>
     </div>
 
-    <!-- DROP ZONE -->
+    <!-- DROP ZONE (múltiples audios) -->
     <div class="drop-zone" id="dropZone">
-      <input type="file" id="audioFile" accept="audio/*,.ogg,.m4a,.mp3,.mp4,.opus,.wav,.aac" onchange="onFileSelected(this.files[0])">
+      <input type="file" id="audioFile" accept="audio/*,.ogg,.m4a,.mp3,.mp4,.opus,.wav,.aac" multiple onchange="onFilesSelected(this.files)">
       <div class="drop-icon">🎧</div>
-      <div class="drop-title">Arrastra el audio aquí o toca para buscar</div>
-      <div class="drop-sub">Suelta el archivo de voz de WhatsApp directamente aquí</div>
+      <div class="drop-title">Arrastra hasta 18 audios aquí o toca para buscar</div>
+      <div class="drop-sub">Puedes seleccionar varios audios de WhatsApp a la vez</div>
       <div class="drop-formats">OGG · M4A · MP3 · MP4 · WAV · OPUS · AAC</div>
     </div>
 
-    <!-- AUDIO PREVIEW -->
-    <div id="audioPlayerWrap" style="display:none;margin-top:12px;background:#f7fafc;border-radius:10px;padding:12px 16px;display:none;align-items:center;gap:12px">
-      <span id="audioName" style="font-size:.82rem;font-weight:600;color:#4a5568;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;max-width:200px"></span>
-      <audio id="audioPreview" controls style="flex:2;height:34px"></audio>
-      <button class="btn btn-gray btn-sm" onclick="resetAudio()">✕</button>
+    <!-- COLA DE AUDIOS -->
+    <div id="queueWrap" style="display:none;margin-top:14px">
+      <div id="queueList" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+
+    <!-- BARRA DE PROGRESO BATCH -->
+    <div id="batchProgress" style="display:none;margin-top:14px;background:#ebf8ff;border-radius:10px;padding:12px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span id="batchStatus" style="font-size:.85rem;font-weight:700;color:#2b6cb0"></span>
+        <span id="batchCounter" style="font-size:.8rem;color:#718096"></span>
+      </div>
+      <div style="background:#bee3f8;border-radius:6px;height:8px;overflow:hidden">
+        <div id="batchBar" style="height:100%;background:#3182ce;border-radius:6px;transition:width .4s;width:0%"></div>
+      </div>
     </div>
 
     <!-- STEP 1 ACTIONS -->
     <div class="actions" id="actStep1" style="display:none">
-      <button class="btn btn-blue" id="btnTranscribir" onclick="transcribir()">
+      <button class="btn btn-blue" id="btnTranscribir" onclick="procesarTodos()">
         <span id="spinTrans" class="spinner"></span>
-        🎙️ Transcribir audio
+        🎙️ Procesar audios
       </button>
     </div>
 
-    <!-- TRANSCRIPTION RESULT -->
+    <!-- TRANSCRIPTION RESULT (modo 1 audio) -->
     <div id="transSection" style="display:none;margin-top:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="font-size:.8rem;font-weight:700;color:#718096;text-transform:uppercase">Transcripción</div>
@@ -356,6 +365,7 @@ tbody tr.has-total{background:#f0fff4;font-weight:600}
 <script>
 let allEntries=[], previewViajes=[], apiKey='';
 let currentFile=null;
+let audioQueue=[];  // cola de archivos para batch
 
 // INIT
 (async()=>{
@@ -390,29 +400,46 @@ loadNextViaje();
 const dz=document.getElementById('dropZone');
 dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
 dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');const f=e.dataTransfer.files[0];if(f)onFileSelected(f);});
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files.length)onFilesSelected(e.dataTransfer.files);});
 
-function onFileSelected(file){
-  if(!file)return;
-  currentFile=file;
-  // show player
-  const wrap=document.getElementById('audioPlayerWrap');
-  wrap.style.display='flex';
-  document.getElementById('audioName').textContent=file.name;
-  const audio=document.getElementById('audioPreview');
-  audio.src=URL.createObjectURL(file);
-  // show transcribe button
+function onFilesSelected(files){
+  if(!files||!files.length)return;
+  const MAX=18;
+  audioQueue=Array.from(files).slice(0,MAX);
+  currentFile=audioQueue[0];
+  renderQueue();
   document.getElementById('actStep1').style.display='flex';
+  document.getElementById('btnTranscribir').innerHTML=
+    `<span id="spinTrans" class="spinner"></span> 🎙️ Procesar ${audioQueue.length} audio${audioQueue.length>1?'s':''}`;
   setStep(1);
 }
 
+function renderQueue(){
+  const wrap=document.getElementById('queueWrap');
+  const list=document.getElementById('queueList');
+  wrap.style.display='block';
+  list.innerHTML=audioQueue.map((f,i)=>`
+    <div id="qitem${i}" style="display:flex;align-items:center;gap:8px;background:#f7fafc;border-radius:8px;padding:8px 12px;font-size:.82rem">
+      <span id="qicon${i}" style="font-size:1rem">⏳</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#4a5568">${f.name}</span>
+      <span id="qstatus${i}" style="font-size:.75rem;color:#a0aec0">En espera</span>
+    </div>`).join('');
+}
+
+function setQueueStatus(i, icon, status, color='#a0aec0'){
+  const ic=document.getElementById('qicon'+i);
+  const st=document.getElementById('qstatus'+i);
+  if(ic)ic.textContent=icon;
+  if(st){st.textContent=status;st.style.color=color;}
+}
+
 function resetAudio(){
-  currentFile=null;
+  currentFile=null; audioQueue=[];
   document.getElementById('audioFile').value='';
-  document.getElementById('audioPlayerWrap').style.display='none';
+  document.getElementById('queueWrap').style.display='none';
+  document.getElementById('batchProgress').style.display='none';
   document.getElementById('actStep1').style.display='none';
   document.getElementById('transSection').style.display='none';
-  document.getElementById('audioPreview').src='';
   cancelPreview();
   setStep(0);
 }
@@ -425,33 +452,85 @@ function setStep(n){
   }
 }
 
-// ── TRANSCRIBE ────────────────────────────────────────────────
-async function transcribir(){
-  if(!currentFile){toast('Primero sube un archivo de audio','error');return;}
+// ── PROCESAR TODOS LOS AUDIOS (batch) ────────────────────────
+async function procesarTodos(){
+  if(!audioQueue.length){toast('Primero sube audios','error');return;}
+  if(!apiKey){toast('Configura la clave API primero (⚙️ arriba)','error');return;}
+  const fecha=document.getElementById('a-fecha').value;
   const btn=document.getElementById('btnTranscribir');
   const sp=document.getElementById('spinTrans');
   btn.disabled=true; sp.classList.add('show');
-  btn.lastChild.textContent=' Transcribiendo…';
+
+  const progress=document.getElementById('batchProgress');
+  const bar=document.getElementById('batchBar');
+  const statusEl=document.getElementById('batchStatus');
+  const counterEl=document.getElementById('batchCounter');
+  progress.style.display='block';
   setStep(2);
-  try{
-    const fd=new FormData(); fd.append('audio',currentFile);
-    const res=await fetch('/api/transcribe',{method:'POST',body:fd});
-    const data=await res.json();
-    if(!data.ok){toast('Error: '+data.error,'error');setStep(1);return;}
-    document.getElementById('transText').value=data.texto;
-    document.getElementById('transMeta').textContent=data.duration?`Duración: ${data.duration}s · Idioma: ${data.lang}`:'Transcripción lista';
-    document.getElementById('transSection').style.display='block';
-    setStep(3);
-    toast('✅ Audio transcrito correctamente','success');
-  }catch(e){
-    toast('Error de transcripción: '+e.message,'error');setStep(1);
-  }finally{
-    btn.disabled=false; sp.classList.remove('show');
-    btn.lastChild.textContent=' Transcribir audio';
+
+  const total=audioQueue.length;
+  let todosViajes=[];
+  let errores=[];
+
+  for(let i=0;i<total;i++){
+    const file=audioQueue[i];
+    const pct=Math.round((i/total)*100);
+    bar.style.width=pct+'%';
+    counterEl.textContent=`${i+1} de ${total}`;
+    setQueueStatus(i,'🔄','Transcribiendo…','#3182ce');
+
+    try{
+      // 1. Transcribir
+      statusEl.textContent=`🎙️ Transcribiendo: ${file.name}`;
+      const fd=new FormData(); fd.append('audio',file);
+      const tr=await fetch('/api/transcribe',{method:'POST',body:fd});
+      const td=await tr.json();
+      if(!td.ok) throw new Error(td.error);
+      const texto=td.texto;
+      setQueueStatus(i,'✏️','Extrayendo datos…','#6b46c1');
+
+      // 2. Extraer datos con IA
+      statusEl.textContent=`✨ Extrayendo datos: ${file.name}`;
+      const pr=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({texto,fecha,api_key:apiKey})});
+      const pd=await pr.json();
+      if(!pd.ok) throw new Error(pd.error);
+
+      todosViajes=todosViajes.concat(pd.viajes);
+      setQueueStatus(i,'✅',`${pd.viajes.length} viaje(s)`,'#276749');
+
+    }catch(e){
+      setQueueStatus(i,'❌','Error: '+e.message.substring(0,30),'#c53030');
+      errores.push(`Audio ${i+1}: ${e.message}`);
+    }
+
+    // Pequeña pausa para no saturar la API
+    if(i<total-1) await new Promise(r=>setTimeout(r,800));
   }
+
+  bar.style.width='100%';
+  statusEl.textContent=`✅ Completado — ${todosViajes.length} viajes extraídos`;
+
+  if(todosViajes.length){
+    // Renumerar viajes secuencialmente
+    const base=parseInt(document.getElementById('a-viaje').value||'1');
+    todosViajes.forEach((v,i)=>v.viaje_num=base+i);
+    previewViajes=todosViajes;
+    renderPreview();
+    setStep(4);
+    toast(`✅ ${todosViajes.length} viajes de ${total} audios. Revisa y guarda.`,'success');
+  }
+  if(errores.length) toast(`⚠️ ${errores.length} audio(s) con error`,'error');
+
+  btn.disabled=false; sp.classList.remove('show');
 }
 
-// ── EXTRACT ───────────────────────────────────────────────────
+// ── TRANSCRIBE (modo 1 audio — usado desde textarea manual) ──
+async function transcribir(){
+  await procesarTodos();
+}
+
+// ── EXTRACT (desde textarea manual) ──────────────────────────
 async function extraerDatos(){
   const texto=document.getElementById('transText').value.trim();
   const fecha=document.getElementById('a-fecha').value;
@@ -466,10 +545,10 @@ async function extraerDatos(){
       body:JSON.stringify({texto,fecha,api_key:apiKey})});
     const data=await res.json();
     if(!data.ok){toast('Error: '+data.error,'error');return;}
-    previewViajes=data.viajes;
+    previewViajes=[...previewViajes,...data.viajes];
     renderPreview();
     setStep(4);
-    toast(`✅ ${previewViajes.length} viaje(s) extraído(s). Revisa y guarda.`,'success');
+    toast(`✅ ${data.viajes.length} viaje(s) extraído(s). Revisa y guarda.`,'success');
   }catch(e){toast('Error: '+e.message,'error');}
   finally{btn.disabled=false;sp.classList.remove('show');btn.lastChild.textContent=' Extraer datos con IA';}
 }
