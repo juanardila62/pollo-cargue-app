@@ -153,29 +153,40 @@ def insert_entry(fecha_s, viaje, dia_num, data):
         conn.commit()
 
 def generate_excel():
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = SHEET_NAME
-    ws.cell(row=3, column=5).value = 'REPORTE DIARIO DE CARGUE  SAVICOL'
-    headers = [None, None, 'FECHA ', 'Nº VIAJES', 'GRANJA ', 'CUADRILLA',
-               'CANTIDAD DE PERSONAS ', 'NOMBRE CONDUCTOR', 'PLACA',
-               'HORA INICIO', 'HORA SALIDA ', 'CANTIDAD', 'TOTAL POLLOS DIA ']
-    for col, h in enumerate(headers, 1):
-        ws.cell(row=DATA_START-1, column=col).value = h
+    from openpyxl.styles import Font, Alignment
+    TMPL = os.path.join(os.path.dirname(__file__), 'template_cargue.xlsx')
+    wb = openpyxl.load_workbook(TMPL)
+    ws = wb[SHEET_NAME]
+
+    FMT_DATE  = 'dd/mm/yyyy'
+    FMT_TIME  = '[$-F400]h:mm:ss\\ AM/PM'
+    FMT_NUM   = '_-* #,##0_-;\\-* #,##0_-;_-* "-"??_-;_-@_-'
+    ALN_CTR   = Alignment(horizontal='center', vertical='center')
+    ALN_LEFT  = Alignment(horizontal='left',   vertical='center')
+
     for i, e in enumerate(get_entries()):
         r = DATA_START + i
-        ws.cell(r, 2).value = e['dia']
-        ws.cell(r, 3).value = datetime.strptime(e['fecha'], '%Y-%m-%d') if e['fecha'] else None
-        ws.cell(r, 4).value = e['viaje']
-        ws.cell(r, 5).value = e['granja']
-        ws.cell(r, 6).value = e['cuadrilla']
-        ws.cell(r, 7).value = e['personas']
-        ws.cell(r, 8).value = e['conductor']
-        ws.cell(r, 9).value = e['placa']
-        ws.cell(r, 10).value = parse_time(e['hora_inicio'])
-        ws.cell(r, 11).value = parse_time(e['hora_salida'])
-        ws.cell(r, 12).value = e['cantidad']
-        ws.cell(r, 13).value = e['total_dia']
+        def sc(col, val, fmt=None, bold=False, aln=ALN_CTR):
+            cell = ws.cell(r, col, value=val)
+            if fmt:  cell.number_format = fmt
+            if bold: cell.font = Font(bold=True, size=10)
+            else:    cell.font = Font(bold=False, size=10)
+            cell.alignment = aln
+
+        fecha_dt = datetime.strptime(e['fecha'], '%Y-%m-%d') if e['fecha'] else None
+        sc(2,  e['dia'])
+        sc(3,  fecha_dt,              FMT_DATE)
+        sc(4,  e['viaje'])
+        sc(5,  e['granja'],           aln=ALN_CTR)
+        sc(6,  e['cuadrilla'],        aln=ALN_CTR)
+        sc(7,  e['personas'])
+        sc(8,  e['conductor'],        aln=ALN_LEFT)
+        sc(9,  e['placa'],            aln=ALN_CTR)
+        sc(10, parse_time(e['hora_inicio']), FMT_TIME)
+        sc(11, parse_time(e['hora_salida']), FMT_TIME)
+        sc(12, e['cantidad'],         FMT_NUM)
+        sc(13, e['total_dia'],        FMT_NUM, bold=(e['total_dia'] is not None))
+
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
