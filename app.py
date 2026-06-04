@@ -177,6 +177,10 @@ def generate_excel():
             f.bold = True
             cell.font = f
 
+    from openpyxl.styles import PatternFill, Color
+    GREEN_FILL  = PatternFill('solid', fgColor='92D050')
+    GREEN_FONT_COLOR = 'FFFFFFFF'  # blanco sobre verde
+
     entries = get_entries()
     for i, e in enumerate(entries):
         r = DATA_START + i
@@ -201,7 +205,14 @@ def generate_excel():
             cell = ws.cell(r, col, value=val)
             tmpl = tmpl_row.get(col)
             if tmpl:
-                apply_style(cell, tmpl, bold=(is_total and col == 13))
+                apply_style(cell, tmpl, bold=False)
+            # Verde solo en la celda de TOTAL POLLOS DIA (col 13)
+            if is_total and col == 13:
+                cell.fill = copymod.copy(GREEN_FILL)
+                f = copymod.copy(cell.font)
+                f.bold = True
+                f.color = Font(color=GREEN_FONT_COLOR).color
+                cell.font = f
 
     buf = io.BytesIO()
     wb.save(buf)
