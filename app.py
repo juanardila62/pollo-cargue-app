@@ -153,39 +153,55 @@ def insert_entry(fecha_s, viaje, dia_num, data):
         conn.commit()
 
 def generate_excel():
-    from openpyxl.styles import Font, Alignment
+    import copy as copymod
+    from openpyxl.styles import Font
     TMPL = os.path.join(os.path.dirname(__file__), 'template_cargue.xlsx')
     wb = openpyxl.load_workbook(TMPL)
     ws = wb[SHEET_NAME]
 
-    FMT_DATE  = 'dd/mm/yyyy'
-    FMT_TIME  = '[$-F400]h:mm:ss\\ AM/PM'
-    FMT_NUM   = '_-* #,##0_-;\\-* #,##0_-;_-* "-"??_-;_-@_-'
-    ALN_CTR   = Alignment(horizontal='center', vertical='center')
-    ALN_LEFT  = Alignment(horizontal='left',   vertical='center')
+    # Row 6 is our style template row (empty values, full styles)
+    tmpl_row = {cell.column: cell for cell in ws[DATA_START]}
 
-    for i, e in enumerate(get_entries()):
+    def apply_style(cell, tmpl_cell, bold=False):
+        try: cell.font      = copymod.copy(tmpl_cell.font)
+        except: pass
+        try: cell.fill      = copymod.copy(tmpl_cell.fill)
+        except: pass
+        try: cell.border    = copymod.copy(tmpl_cell.border)
+        except: pass
+        try: cell.alignment = copymod.copy(tmpl_cell.alignment)
+        except: pass
+        cell.number_format = tmpl_cell.number_format
+        if bold:
+            f = copymod.copy(cell.font)
+            f.bold = True
+            cell.font = f
+
+    entries = get_entries()
+    for i, e in enumerate(entries):
         r = DATA_START + i
-        def sc(col, val, fmt=None, bold=False, aln=ALN_CTR):
-            cell = ws.cell(r, col, value=val)
-            if fmt:  cell.number_format = fmt
-            if bold: cell.font = Font(bold=True, size=10)
-            else:    cell.font = Font(bold=False, size=10)
-            cell.alignment = aln
-
         fecha_dt = datetime.strptime(e['fecha'], '%Y-%m-%d') if e['fecha'] else None
-        sc(2,  e['dia'])
-        sc(3,  fecha_dt,              FMT_DATE)
-        sc(4,  e['viaje'])
-        sc(5,  e['granja'],           aln=ALN_CTR)
-        sc(6,  e['cuadrilla'],        aln=ALN_CTR)
-        sc(7,  e['personas'])
-        sc(8,  e['conductor'],        aln=ALN_LEFT)
-        sc(9,  e['placa'],            aln=ALN_CTR)
-        sc(10, parse_time(e['hora_inicio']), FMT_TIME)
-        sc(11, parse_time(e['hora_salida']), FMT_TIME)
-        sc(12, e['cantidad'],         FMT_NUM)
-        sc(13, e['total_dia'],        FMT_NUM, bold=(e['total_dia'] is not None))
+        is_total = e['total_dia'] is not None
+
+        vals = {
+            2:  e['dia'],
+            3:  fecha_dt,
+            4:  e['viaje'],
+            5:  e['granja'],
+            6:  e['cuadrilla'],
+            7:  e['personas'],
+            8:  e['conductor'],
+            9:  e['placa'],
+            10: parse_time(e['hora_inicio']),
+            11: parse_time(e['hora_salida']),
+            12: e['cantidad'],
+            13: e['total_dia'],
+        }
+        for col, val in vals.items():
+            cell = ws.cell(r, col, value=val)
+            tmpl = tmpl_row.get(col)
+            if tmpl:
+                apply_style(cell, tmpl, bold=(is_total and col == 13))
 
     buf = io.BytesIO()
     wb.save(buf)
