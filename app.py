@@ -222,28 +222,44 @@ def generate_excel():
 # ── Prompt ────────────────────────────────────────────────────────────────────
 PROMPT = """Eres un asistente que extrae datos de reportes de cargue de pollos en Colombia.
 
-REGLAS:
-1. PLACAS colombianas: exactamente 3 letras + 3 números (ej: TLO881, EQY779).
-   Whisper las transcribe mal: "EQY es 181"→EQY181, "EQY setenta y ocho uno"→EQY781.
-2. HORAS: "once treinta y cinco"=11:35, "tres y veintidós"=03:22. Formato HH:MM 24h.
-3. NÚMEROS: "tres mil quinientos sesenta y cuatro"=3564.
-4. NOMBRES: nombres propios colombianos.
+Puedes recibir DOS tipos de entrada:
+
+TIPO 1 — TRANSCRIPCIÓN DE AUDIO (cuadrilla Elber):
+- Texto hablado transcrito por Whisper, puede tener errores fonéticos.
+- PLACAS: exactamente 3 letras + 3 números. Whisper las transcribe mal:
+  "EQY es 181"→EQY181, "EQY setenta y ocho uno"→EQY781, "te ele o 881"→TLO881.
+- HORAS habladas: "once treinta y cinco"=11:35, "tres y veintidós"=03:22.
+- NÚMEROS hablados: "tres mil quinientos sesenta y cuatro"=3564.
+
+TIPO 2 — MENSAJE ESCRITO (cuadrilla Fernando), formato:
+  Conductor: [nombre]
+  Placa: [placa]
+  Total pollo: [número]  (o "Cantidad", "Pollos")
+  Hora inicio: [hora] a.m/p.m
+  Hora salida: [hora] a.m/p.m
+- Las horas pueden tener espacios ("06: 18 a.m" → 06:18). Conviértelas a HH:MM en 24h.
+- Puede haber varios viajes seguidos en el mismo mensaje.
+- Si dice "Total pollo" o "Total pollos", es el total_dia.
+
+REGLAS GENERALES:
+- Horas en formato HH:MM 24h (05:30 a.m=05:30, 06:18 p.m=18:18).
+- Placas: sin espacios, 3 letras + 3 números.
+- Conductor en MAYÚSCULAS.
 
 Para cada viaje devuelve:
-- conductor: nombre en MAYÚSCULAS
-- placa: 3 letras + 3 números, sin espacios
-- hora_inicio: HH:MM 24h
-- hora_salida: HH:MM 24h
-- cantidad: entero
-- total_dia: entero si se menciona como total del día, sino null
-- granja: MALAGUEÑA/GARCERAS/SAN JOSE/HUERTAS/etc. o null
+- conductor: MAYÚSCULAS
+- placa: AAA000 sin espacios
+- hora_inicio: HH:MM 24h o null
+- hora_salida: HH:MM 24h o null
+- cantidad: entero (pollos del viaje) o null
+- total_dia: entero si es el total del día, sino null
+- granja: nombre o null
 - cuadrilla: "CARGUEROS" por defecto
 - personas: 11 por defecto
 
-Responde SOLO con JSON válido:
-{"viajes": [...]}
+Responde SOLO con JSON válido: {"viajes": [...]}
 
-Transcripción:
+Texto:
 """
 
 # ── Routes ────────────────────────────────────────────────────────────────────

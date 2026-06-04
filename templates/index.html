@@ -160,8 +160,16 @@ tbody tr.has-total{background:#f0fff4;font-weight:600}
 <!-- ═══ TAB AUDIO ═══════════════════════════════════════════════ -->
 <div class="tab-content active" id="tab-audio">
 
+  <!-- SELECTOR DE CUADRILLA -->
+  <div style="display:flex;gap:10px;margin-bottom:14px">
+    <button id="btnModoAudio" class="btn btn-blue" style="flex:1" onclick="setModo('audio')">🎙️ Elber — Audios</button>
+    <button id="btnModoTexto" class="btn btn-gray" style="flex:1" onclick="setModo('texto')">📝 Fernando — Texto escrito</button>
+  </div>
+
+  <!-- ── MODO AUDIO (Elber) ── -->
+  <div id="modoAudio">
   <div class="card">
-    <div class="card-title">🎙️ Audio del reporte de cargue</div>
+    <div class="card-title">🎙️ Audio del reporte de cargue — Cuadrilla Elber</div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div class="fg">
@@ -250,6 +258,56 @@ tbody tr.has-total{background:#f0fff4;font-weight:600}
       </div>
     </div>
   </div>
+
+  </div><!-- fin modoAudio -->
+
+  <!-- ── MODO TEXTO (Fernando) ── -->
+  <div id="modoTexto" style="display:none">
+  <div class="card">
+    <div class="card-title">📝 Reporte escrito — Cuadrilla Fernando</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="fg">
+        <label>Fecha del cargue</label>
+        <input type="date" id="t-fecha" value="{{ today }}">
+      </div>
+      <div class="fg">
+        <label>Nº Viaje (primer viaje)</label>
+        <input type="number" id="t-viaje" value="1" min="1">
+      </div>
+      <div class="fg">
+        <label>Granja</label>
+        <input type="text" id="t-granja" placeholder="Ej: MALAGUEÑA" style="text-transform:uppercase">
+      </div>
+      <div class="fg">
+        <label>Cuadrilla</label>
+        <select id="t-cuadrilla">
+          <option value="CARGUEROS">CARGUEROS</option>
+          <option value="ABONEROS">ABONEROS</option>
+          <option value="DOBLE">DOBLE</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Cantidad de personas</label>
+        <input type="number" id="t-personas" value="11" min="1" max="50">
+      </div>
+    </div>
+
+    <div style="font-size:.78rem;font-weight:700;color:#718096;text-transform:uppercase;margin-bottom:6px">
+      Pega aquí el mensaje de WhatsApp
+    </div>
+    <textarea id="textoFernando" style="width:100%;min-height:160px;padding:14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:.88rem;font-family:inherit;resize:vertical;background:#f7fafc;line-height:1.7"
+      placeholder="Conductor: Diego Vega&#10;Placa: TLN180&#10;Total pollo: 3110&#10;Hora inicio: 05:30 a.m&#10;Hora salida: 06:18 a.m&#10;&#10;(Si hay varios viajes, pégalos todos juntos)"></textarea>
+
+    <div class="actions" style="margin-top:12px">
+      <button class="btn btn-purple" id="btnExtraerTexto" onclick="extraerTextoFernando()">
+        <span id="spinTexto" class="spinner"></span>
+        ✨ Extraer datos con IA
+      </button>
+      <button class="btn btn-gray btn-sm" onclick="document.getElementById('textoFernando').value=''">🗑️ Limpiar</button>
+    </div>
+  </div>
+  </div><!-- fin modoTexto -->
 
   <!-- PREVIEW VIAJES -->
   <div class="preview-wrap" id="previewWrap">
@@ -373,6 +431,21 @@ let audioQueue=[];  // cola de archivos para batch
   if(hk.has_key) apiKey='__server__';
   await loadEntries();
 })();
+
+// ── MODO AUDIO / TEXTO ────────────────────────────────────────
+function setModo(modo){
+  const esAudio = modo==='audio';
+  document.getElementById('modoAudio').style.display = esAudio?'block':'none';
+  document.getElementById('modoTexto').style.display = esAudio?'none':'block';
+  document.getElementById('btnModoAudio').className = 'btn '+(esAudio?'btn-blue':'btn-gray');
+  document.getElementById('btnModoTexto').className = 'btn '+(esAudio?'btn-gray':'btn-purple');
+  // Sync fecha y viaje
+  if(!esAudio){
+    document.getElementById('t-fecha').value = document.getElementById('a-fecha').value;
+    fetch('/api/next-viaje?fecha='+document.getElementById('t-fecha').value)
+      .then(r=>r.json()).then(d=>document.getElementById('t-viaje').value=d.next_viaje);
+  }
+}
 
 // ── TABS ──────────────────────────────────────────────────────
 function switchTab(n){
@@ -528,6 +601,43 @@ async function procesarTodos(){
 // ── TRANSCRIBE (modo 1 audio — usado desde textarea manual) ──
 async function transcribir(){
   await procesarTodos();
+}
+
+// ── EXTRAER TEXTO FERNANDO ────────────────────────────────────
+async function extraerTextoFernando(){
+  const texto = document.getElementById('textoFernando').value.trim();
+  const fecha  = document.getElementById('t-fecha').value;
+  const granja    = document.getElementById('t-granja').value.trim().toUpperCase();
+  const cuadrilla = document.getElementById('t-cuadrilla').value;
+  const personas  = document.getElementById('t-personas').value;
+  const viajeBase = parseInt(document.getElementById('t-viaje').value||'1');
+
+  if(!texto){toast('Pega el texto del mensaje primero','error');return;}
+  if(!apiKey){toast('Configura la clave API primero (⚙️ arriba)','error');return;}
+
+  const btn=document.getElementById('btnExtraerTexto');
+  const sp=document.getElementById('spinTexto');
+  btn.disabled=true; sp.classList.add('show');
+  btn.lastChild.textContent=' Procesando…';
+  try{
+    const res=await fetch('/api/parse',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({texto,fecha,api_key:apiKey,formato:'escrito'})});
+    const data=await res.json();
+    if(!data.ok){toast('Error: '+data.error,'error');return;}
+    // Aplicar campos globales
+    const nuevos=data.viajes.map((v,i)=>({
+      ...v,
+      granja:    v.granja||granja,
+      cuadrilla: v.cuadrilla||cuadrilla,
+      personas:  v.personas||personas,
+      viaje_num: viajeBase+i,
+    }));
+    previewViajes=[...previewViajes,...nuevos];
+    renderPreview();
+    toast(`✅ ${nuevos.length} viaje(s) extraídos del texto`,'success');
+    document.getElementById('textoFernando').value='';
+  }catch(e){toast('Error: '+e.message,'error');}
+  finally{btn.disabled=false;sp.classList.remove('show');btn.lastChild.textContent=' Extraer datos con IA';}
 }
 
 // ── EXTRACT (desde textarea manual) ──────────────────────────
