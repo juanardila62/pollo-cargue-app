@@ -482,12 +482,15 @@ function renderPreview(){
     <tr>
       <td><b>${i+1}</b></td>
       <td><input class="editable" value="${fmt(v.conductor)}" onchange="previewViajes[${i}].conductor=this.value" style="min-width:130px"></td>
-      <td><input class="editable" value="${fmt(v.placa)}" onchange="previewViajes[${i}].placa=this.value" style="width:80px"></td>
+      <td>
+        <input class="editable placa-input" value="${fmt(v.placa)}" onchange="previewViajes[${i}].placa=this.value.toUpperCase();this.value=this.value.toUpperCase()" style="width:86px;border-color:#e67e22;background:#fff8f0" placeholder="AAA000" maxlength="10" title="Verifica la placa — el audio puede transcribirla mal">
+        <div style="font-size:.65rem;color:#e67e22;margin-top:2px;text-align:center">✏️ verifica</div>
+      </td>
       <td><input class="editable" type="time" value="${fmt(v.hora_inicio)}" onchange="previewViajes[${i}].hora_inicio=this.value"></td>
       <td><input class="editable" type="time" value="${fmt(v.hora_salida)}" onchange="previewViajes[${i}].hora_salida=this.value"></td>
       <td><input class="editable" value="${fmt(v.granja)}" onchange="previewViajes[${i}].granja=this.value" style="width:100px"></td>
       <td><input class="editable" type="number" value="${v.cantidad||''}" onchange="previewViajes[${i}].cantidad=this.value" style="width:82px"></td>
-      <td>${v.total_dia!=null?'<span class="total-chip">'+Number(v.total_dia).toLocaleString('es-CO')+'</span>':'<span style="color:#ccc">—</span>'}</td>
+      <td>${v.total_dia!=null?'<span class="total-chip" style="background:#92d050;color:#1a3a00;">'+Number(v.total_dia).toLocaleString('es-CO')+'</span>':'<span style="color:#ccc">—</span>'}</td>
       <td><button class="del-row" onclick="removeRow(${i})">✕</button></td>
     </tr>`).join('');
   document.getElementById('previewCount').textContent=previewViajes.length+' viaje'+(previewViajes.length!==1?'s':'');
